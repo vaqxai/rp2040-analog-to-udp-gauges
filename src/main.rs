@@ -15,6 +15,21 @@ enum AppError {
 }
 
 slint::slint! {
+    export component Gauge inherits Image {
+        in property <int> value;
+
+        Image {
+            source: @image-url("needle.png");
+            rotation-angle: ((value*1deg) / 1024deg) * 260deg;
+            height: 200px;
+            width: 200px;
+        }
+        Image {
+            source: @image-url("gauge.png");
+            height: 200px;
+            width: 200px;
+        }
+    }
     export component App {
 
         in property <int> a0;
@@ -25,29 +40,53 @@ slint::slint! {
         callback click_reconnect();
 
         GridLayout {
-            spacing: 50px;
-            Text {
-                text: a0;
-                font-size: 50px;
-                color: blue;
+            spacing: 25px;
+            Row {
+                Gauge {
+                    value: a0;
+                }
+                Gauge {
+                    value: a1;
+                }
+                Gauge {
+                    value: a2;
+                }
+                Gauge {
+                    value: a3;
+                }
             }
+            Row {
+                Text {
+                    text: round(a0 / 1024 * 333) + " mV";
+                    font-size: 25px;
+                    color: blue;
+                    horizontal-alignment: center;
+                    width: 200px;
+                }
 
-            Text {
-                text: a1;
-                font-size: 50px;
-                color: blue;
-            }
+                Text {
+                    text: round(a1 / 1024 * 333) + " mV";
+                    font-size: 25px;
+                    color: blue;
+                    horizontal-alignment: center;
+                    width: 200px;
+                }
 
-            Text {
-                text: a2;
-                font-size: 50px;
-                color: blue;
-            }
+                Text {
+                    text: round(a2 / 1024 * 333) + " mV";
+                    font-size: 25px;
+                    color: blue;
+                    horizontal-alignment: center;
+                    width: 200px;
+                }
 
-            Text {
-                text: a3;
-                font-size: 50px;
-                color: blue;
+                Text {
+                    text: round(a3 / 1024 * 333) + " mV";
+                    font-size: 25px;
+                    color: blue;
+                    horizontal-alignment: center;
+                    width: 200px;
+                }
             }
         }
     }
@@ -59,6 +98,12 @@ fn main() -> Result<(), AppError> {
     let backend = Arc::new(RwLock::new(
         ViewerBackend::connect().map_err(|e| AppError::BackendError(e))?,
     ));
+
+    backend
+        .write()
+        .map(|mut be| be.connect_socket().map_err(|e| AppError::BackendError(e)))
+        .unwrap()
+        .unwrap();
 
     // handle updates offthread
     let be_clone = backend.clone();

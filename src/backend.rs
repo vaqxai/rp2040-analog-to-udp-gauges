@@ -6,7 +6,7 @@ static PORT: u16 = 4000;
 static LOCAL_IP: Ipv4Addr = Ipv4Addr::new(192, 168, 4, 2); // TODO: make this configurable
 static REMOTE_IP: Ipv4Addr = Ipv4Addr::new(192, 168, 4, 1); // TODO: make this configurable
 
-static POLL_DELAY: Duration = Duration::from_millis(5); // prevent interface spam
+static POLL_DELAY: Duration = Duration::from_millis(1); // prevent interface spam
 
 #[derive(Debug)]
 pub struct AnalogValues {
@@ -20,6 +20,9 @@ pub struct ViewerBackend {
     socket: UdpSocket,
     analog_vals: AnalogValues,
     last_poll: Instant,
+    polled_amt: u32,
+    started: Instant,
+    initialized: bool,
 }
 
 #[derive(Debug)]
@@ -59,6 +62,9 @@ impl ViewerBackend {
                 a3: 0,
             },
             last_poll: Instant::now(),
+            polled_amt: 0,
+            started: Instant::now(),
+            initialized: false,
         })
     }
 
@@ -92,33 +98,46 @@ impl ViewerBackend {
         }
     }
 
+    pub fn connect_socket(&mut self) -> Result<(), ViewerBackendError> {
+        self.socket
+            .connect(SocketAddr::from((REMOTE_IP, PORT)))
+            .map_err(|e| ViewerBackendError::SocketError(e))?;
+        Ok(())
+    }
+
     /// poll new values or reads cached ones if delay has not yet elapsed
     pub fn poll(&mut self) -> Result<&AnalogValues, ViewerBackendError> {
         if self.last_poll.elapsed() < POLL_DELAY {
             return Ok(&self.analog_vals);
         }
 
-        log::info!("polling");
-        let mut buf = [0u8; 1024];
+        if !self.initialized {
+            self.socket
+                .send_to(b"init", SocketAddr::from((REMOTE_IP, PORT)))
+                .map_err(|e| ViewerBackendError::SocketError(e))?;
+            self.initialized = true;
+        }
 
-        self.socket
-            .connect(SocketAddr::from((REMOTE_IP, PORT)))
-            .map_err(|e| ViewerBackendError::SocketError(e))?;
-        self.socket
-            .send(&[0u8])
-            .map_err(|e| ViewerBackendError::SocketError(e))?;
-        let (amt, src) = match self.socket.recv_from(&mut buf) {
-            Ok((amt, src)) => (amt, src),
+        log::info!("polling");
+
+        let mut buf = [0u8; 22];
+
+        let amt = match self.socket.recv(&mut buf) {
+            Ok(amt) => amt,
             Err(_) => Err(ViewerBackendError::SocketError(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "recv_from failed",
             )))?,
         };
-        log::info!("amt: {}, src: {}", amt, src);
+        log::info!("amt: {}", amt);
 
         let recv_str = std::str::from_utf8(&buf[..amt])
             .map_err(|_| ViewerBackendError::ParserError(String::from("invalid utf8")))?;
 
+        // remove null terminator
+        let recv_str = recv_str.trim_end_matches('\0');
+
+        // remove whitespace
         let recv_str = recv_str.trim();
 
         log::info!("recv: {:?}", recv_str);
@@ -135,6 +154,10 @@ impl ViewerBackend {
         log::info!("analog_vals: {:?}", self.analog_vals);
 
         self.last_poll = Instant::now();
+        self.polled_amt += 1;
+
+        log::info!("polled {} times", self.polled_amt);
+        log::info!("started {} ms ago", self.started.elapsed().as_millis());
 
         Ok(&self.analog_vals)
     }
