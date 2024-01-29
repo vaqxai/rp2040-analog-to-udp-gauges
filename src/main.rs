@@ -20,7 +20,7 @@ slint::slint! {
 
         Image {
             source: @image-url("needle.png");
-            rotation-angle: ((value*1deg) / 1024deg) * 260deg;
+            rotation-angle: ((value*1deg) / 4096deg) * 260deg;
             height: 200px;
             width: 200px;
         }
@@ -57,7 +57,7 @@ slint::slint! {
             }
             Row {
                 Text {
-                    text: round(a0 / 1024 * 333) + " mV";
+                    text: round(a0 / 4096 * 3333) + " mV";
                     font-size: 25px;
                     color: blue;
                     horizontal-alignment: center;
@@ -65,7 +65,7 @@ slint::slint! {
                 }
 
                 Text {
-                    text: round(a1 / 1024 * 333) + " mV";
+                    text: round(a1 / 4096 * 3333) + " mV";
                     font-size: 25px;
                     color: blue;
                     horizontal-alignment: center;
@@ -73,7 +73,7 @@ slint::slint! {
                 }
 
                 Text {
-                    text: round(a2 / 1024 * 333) + " mV";
+                    text: round(a2 / 4096 * 3333) + " mV";
                     font-size: 25px;
                     color: blue;
                     horizontal-alignment: center;
@@ -81,7 +81,7 @@ slint::slint! {
                 }
 
                 Text {
-                    text: round(a3 / 1024 * 333) + " mV";
+                    text: round(a3 / 4096 * 3333) + " mV";
                     font-size: 25px;
                     color: blue;
                     horizontal-alignment: center;

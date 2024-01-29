@@ -120,35 +120,40 @@ impl ViewerBackend {
 
         log::info!("polling");
 
-        let mut buf = [0u8; 22];
+        let mut buf = [0u8; 8];
+
+        self.socket
+            .send_to(b"poll", SocketAddr::from((REMOTE_IP, PORT)))
+            .map_err(|e| ViewerBackendError::SocketError(e))?;
 
         let amt = match self.socket.recv(&mut buf) {
             Ok(amt) => amt,
-            Err(_) => Err(ViewerBackendError::SocketError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "recv_from failed",
-            )))?,
+            Err(e) => {
+                self.socket
+                    .connect(SocketAddr::from((REMOTE_IP, PORT)))
+                    .map_err(|e| ViewerBackendError::SocketError(e))?;
+
+                Err(ViewerBackendError::SocketError(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                )))?
+            }
         };
         log::info!("amt: {}", amt);
 
-        let recv_str = std::str::from_utf8(&buf[..amt])
-            .map_err(|_| ViewerBackendError::ParserError(String::from("invalid utf8")))?;
+        let mut values: [u16; 4] = [0, 0, 0, 0];
 
-        // remove null terminator
-        let recv_str = recv_str.trim_end_matches('\0');
-
-        // remove whitespace
-        let recv_str = recv_str.trim();
-
-        log::info!("recv: {:?}", recv_str);
-
-        let mut pieces = recv_str.split(':');
+        let mut offs = 0;
+        for i in 0..4 {
+            values[i] = u16::from_be_bytes([buf[offs], buf[offs + 1]]);
+            offs += 2;
+        }
 
         self.analog_vals = AnalogValues {
-            a0: Self::parse_piece(&mut pieces, "a0")?,
-            a1: Self::parse_piece(&mut pieces, "a1")?,
-            a2: Self::parse_piece(&mut pieces, "a2")?,
-            a3: Self::parse_piece(&mut pieces, "a3")?,
+            a0: values[0],
+            a1: values[1],
+            a2: values[2],
+            a3: values[3],
         };
 
         log::info!("analog_vals: {:?}", self.analog_vals);
