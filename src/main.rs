@@ -132,10 +132,11 @@ fn main() -> Result<(), AppError> {
         let app = weak_app;
 
         loop {
-            thread::sleep(std::time::Duration::from_millis(100));
+            // thread::sleep(std::time::Duration::from_millis(1));
 
             let (a0, a1, a2, a3) = match backend.read().map(|be| {
                 be.read().map(|vals| {
+                    // TODO: Why read here instead of poll?
                     (
                         vals.a0 as i32,
                         vals.a1 as i32,

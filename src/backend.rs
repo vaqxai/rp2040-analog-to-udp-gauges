@@ -111,27 +111,30 @@ impl ViewerBackend {
             return Ok(&self.analog_vals);
         }
 
+        log::info!("polling");
+
+        /*
         if !self.initialized {
+            log::info!("initializing conn");
             self.socket
                 .send_to(b"init", SocketAddr::from((REMOTE_IP, PORT)))
                 .map_err(|e| ViewerBackendError::SocketError(e))?;
             self.initialized = true;
         }
-
-        log::info!("polling");
+        */
 
         let mut buf = [0u8; 8];
 
         self.socket
-            .send_to(b"poll", SocketAddr::from((REMOTE_IP, PORT)))
+            .send(b"poll")
             .map_err(|e| ViewerBackendError::SocketError(e))?;
 
         let amt = match self.socket.recv(&mut buf) {
             Ok(amt) => amt,
             Err(e) => {
-                self.socket
-                    .connect(SocketAddr::from((REMOTE_IP, PORT)))
-                    .map_err(|e| ViewerBackendError::SocketError(e))?;
+                // self.socket
+                //    .connect(SocketAddr::from((REMOTE_IP, PORT)))
+                //    .map_err(|e| ViewerBackendError::SocketError(e))?;
 
                 Err(ViewerBackendError::SocketError(std::io::Error::new(
                     std::io::ErrorKind::Other,
