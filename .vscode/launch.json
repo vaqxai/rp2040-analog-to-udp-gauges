@@ -7,14 +7,6 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Launch",
-            "program": "${workspaceFolder}/p2040-udp-viewer",
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
             "name": "Debug executable 'rp2040-udp-viewer'",
             "cargo": {
                 "args": [
